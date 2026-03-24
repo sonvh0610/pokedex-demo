@@ -1,65 +1,125 @@
-import Image from "next/image";
+import Link from 'next/link';
 
-export default function Home() {
+const LIMIT = 20;
+
+const getGifUrl = (id: string) => 
+  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;
+
+interface PokeApiModel {
+  id: number;
+  name: string;
+  image: string;
+}
+
+const mapPokemonData = (pokemon: { name: string; url: string }): PokeApiModel => {
+  const segments = pokemon.url.split('/').filter(Boolean);
+  const id = segments[segments.length - 1];
+  return {
+    id: parseInt(id, 10),
+    name: pokemon.name,
+    image: getGifUrl(id),
+  };
+};
+
+async function getTypes() {
+  const res = await fetch('https://pokeapi.co/api/v2/type', { next: { revalidate: 3600 } });
+  const data = await res.json();
+  return data.results.filter((t: { name: string; url: string }) => !['unknown', 'shadow'].includes(t.name));
+}
+
+async function getPokemons(page: number, type?: string) {
+  const offset = (page - 1) * LIMIT;
+  let results: PokeApiModel[] = [];
+  let count = 0;
+
+  if (type) {
+    const res = await fetch(`https://pokeapi.co/api/v2/type/${type}`);
+    if (!res.ok) return { results: [], count: 0 };
+    const data = await res.json();
+    const all = data.pokemon.map((p: { pokemon: { name: string; url: string } }) => p.pokemon);
+    count = all.length;
+    results = all.slice(offset, offset + LIMIT).map(mapPokemonData);
+  } else {
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${LIMIT}`);
+    if (!res.ok) return { results: [], count: 0 };
+    const data = await res.json();
+    count = data.count;
+    results = data.results.map(mapPokemonData);
+  }
+
+  return { results, count };
+}
+
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+export default async function Home(props: { searchParams: SearchParams }) {
+  const searchParams = await props.searchParams;
+  
+  const pageParam = typeof searchParams.page === 'string' ? searchParams.page : '1';
+  const typeParam = typeof searchParams.type === 'string' ? searchParams.type : undefined;
+  
+  const page = parseInt(pageParam, 10);
+
+  const types = await getTypes();
+  const { results, count } = await getPokemons(page, typeParam);
+
+  const totalPages = Math.ceil(count / LIMIT);
+
+  const prevQuery = new URLSearchParams();
+  if (typeParam) prevQuery.set('type', typeParam);
+  prevQuery.set('page', (page - 1).toString());
+  const prevUrl = page > 1 ? `/?${prevQuery.toString()}` : null;
+
+  const nextQuery = new URLSearchParams();
+  if (typeParam) nextQuery.set('type', typeParam);
+  nextQuery.set('page', (page + 1).toString());
+  const nextUrl = page < totalPages ? `/?${nextQuery.toString()}` : null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <section className="flex flex-col gap-4 px-10">
+      <p className="py-4 text-center">Welcome to Pokemon world</p>
+      <p>Total: {count}</p>
+      
+      <section className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <span>Types:</span>
+        <Link className="border p-4" href="/">All</Link>
+        {types.map((t: { name: string; url: string }) => (
+          <Link key={t.name} className="border p-4" href={`/?type=${t.name}`}>
+            {t.name}
+          </Link>
+        ))}
+      </section>
+
+      <section className="grid grid-cols-6 gap-x-16 gap-y-6">
+        {results.map((pokemon) => (
+          <div key={pokemon.id} className="flex flex-col items-center justify-between border p-4">
+            <h3>{pokemon.name}</h3>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              alt={pokemon.name} 
+              loading="lazy" 
+              width="35" 
+              height="53" 
+              className="w-20" 
+              src={pokemon.image} 
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <p>Number: {pokemon.id}</p>
+          </div>
+        ))}
+      </section>
+
+      <div className="flex justify-center gap-4 py-4">
+        {prevUrl && (
+          <Link className="rounded bg-blue-500 px-4 py-2 text-white" href={prevUrl}>
+            Prev
+          </Link>
+        )}
+        {nextUrl && (
+          <Link className="rounded bg-blue-500 px-4 py-2 text-white" href={nextUrl}>
+            Next
+          </Link>
+        )}
+      </div>
+    </section>
   );
 }
