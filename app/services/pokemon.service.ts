@@ -5,9 +5,14 @@ import { logger } from "@/app/lib/logger";
  * Resolves the absolute base URL for internal API calls.
  * Required for server-side fetch calls in Next.js which need a full URL,
  * not a relative path.
+ * Vercel sets VERCEL_URL automatically; use it when available.
  */
-const getBaseUrl = (): string =>
-  process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+const getBaseUrl = (): string => {
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+};
 
 /**
  * Fetches the available Pokemon types from our internal API.
