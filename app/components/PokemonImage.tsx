@@ -20,7 +20,7 @@ export function PokemonImage({
   return (
     <Image
       {...props}
-      src={imgSrc || fallbackSrc}
+      src={imgSrc}
       alt={alt}
       onError={() => {
         setImgSrc(fallbackSrc);

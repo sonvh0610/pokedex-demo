@@ -21,7 +21,6 @@ export interface HomeViewProps {
  * Pure presenter component for the Pokemon home page.
  * Renders the type filter, pokemon grid, and pagination controls.
  * Contains zero data-fetching logic — all data is received via props.
- * @param {HomeViewProps} props - All data and navigation URLs pre-computed by the container.
  */
 export function HomeView({
   count,
@@ -38,16 +37,14 @@ export function HomeView({
 
       <section className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <span>Types:</span>
-        {types.map((t: NamedAPIResource) => {
+        {types.map((t) => {
           const isSelected = selectedTypes.includes(t.name);
           const newSelected = isSelected
             ? selectedTypes.filter((st) => st !== t.name)
             : [...selectedTypes, t.name];
 
           const query = new URLSearchParams();
-          if (newSelected.length > 0) {
-            query.set("type", newSelected.join(","));
-          }
+          if (newSelected.length > 0) query.set("type", newSelected.join(","));
           // When changing types, always reset to page 1 (omit ?page)
 
           return (

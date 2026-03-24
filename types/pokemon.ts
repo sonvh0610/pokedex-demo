@@ -1,5 +1,6 @@
 /**
- * Represents a generic named resource endpoint in PokeAPI.
+ * Generic named resource from PokeAPI (name + url).
+ * Matches: /api/v2/type results, /api/v2/pokemon results, etc.
  */
 export interface NamedAPIResource {
   name: string;
@@ -7,7 +8,7 @@ export interface NamedAPIResource {
 }
 
 /**
- * Standard data model for a mapped Pokemon to be displayed on the UI.
+ * UI model for Pokemon display (derived from NamedAPIResource).
  */
 export interface PokeApiModel {
   id: number;
@@ -16,51 +17,21 @@ export interface PokeApiModel {
 }
 
 /**
- * Basic Pokemon metadata obtained from listing endpoints.
+ * One entry in /api/v2/type/{id} pokemon array.
+ * Matches PokeAPI: { pokemon: { name, url }, slot }.
  */
-export interface PokemonListItem {
-  name: string;
-  url: string;
+export interface TypePokemonEntry {
+  pokemon: NamedAPIResource;
+  slot: number;
 }
 
 /**
- * Response structure for fetching a list of Pokemon types.
+ * Response from /api/v2/type/{id} (single type detail).
  */
-export interface TypeListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: NamedAPIResource[];
-}
-
-/**
- * Response structure for fetching a list of generic Pokemons.
- */
-export interface PokemonListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: NamedAPIResource[];
-}
-
-/**
- * Response structure for a specific Pokemon Type endpoint, identifying associated Pokemons.
- */
-export interface PokemonTypeResponse {
+export interface TypeDetailResponse {
   id: number;
   name: string;
-  pokemon: Array<{
-    pokemon: NamedAPIResource;
-    slot: number;
-  }>;
-}
-
-/**
- * General response representing either a filtered or all-encompassing Pokemon fetch.
- */
-export interface GetPokemonsResult {
-  results: PokeApiModel[];
-  count: number;
+  pokemon: TypePokemonEntry[];
 }
 
 /**
@@ -77,9 +48,9 @@ export interface PokemonPageResponse {
 }
 
 /**
- * Response shape returned by our internal /api/pokemon-types route.
+ * Response from /api/v2/type (type list) and our /api/pokemon-types.
+ * Matches PokeAPI: { results: [{ name, url }, ...] }.
  */
 export interface TypesApiResponse {
   results: NamedAPIResource[];
 }
-
