@@ -27,18 +27,30 @@ async function getTypes() {
   return data.results.filter((t: { name: string; url: string }) => !['unknown', 'shadow'].includes(t.name));
 }
 
-async function getPokemons(page: number, type?: string) {
+async function getPokemons(page: number, selectedTypes: string[]) {
   const offset = (page - 1) * LIMIT;
   let results: PokeApiModel[] = [];
   let count = 0;
 
-  if (type) {
-    const res = await fetch(`https://pokeapi.co/api/v2/type/${type}`);
-    if (!res.ok) return { results: [], count: 0 };
-    const data = await res.json();
-    const all = data.pokemon.map((p: { pokemon: { name: string; url: string } }) => p.pokemon);
-    count = all.length;
-    results = all.slice(offset, offset + LIMIT).map(mapPokemonData);
+  if (selectedTypes.length > 0) {
+    const responses = await Promise.all(
+      selectedTypes.map((type) => fetch(`https://pokeapi.co/api/v2/type/${type}`).then(res => res.ok ? res.json() : null))
+    );
+    
+    let allPokemonRaw: { name: string; url: string }[] = [];
+    
+    responses.forEach((data, index) => {
+      if (!data) return;
+      const typePokemon = data.pokemon.map((p: { pokemon: { name: string; url: string } }) => p.pokemon);
+      if (index === 0) {
+         allPokemonRaw = typePokemon;
+      } else {
+         allPokemonRaw = allPokemonRaw.filter(p1 => typePokemon.some((p2: { name: string; url: string }) => p2.name === p1.name));
+      }
+    });
+
+    count = allPokemonRaw.length;
+    results = allPokemonRaw.slice(offset, offset + LIMIT).map(mapPokemonData);
   } else {
     const res = await fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${LIMIT}`);
     if (!res.ok) return { results: [], count: 0 };
@@ -56,22 +68,26 @@ export default async function Home(props: { searchParams: SearchParams }) {
   const searchParams = await props.searchParams;
   
   const pageParam = typeof searchParams.page === 'string' ? searchParams.page : '1';
-  const typeParam = typeof searchParams.type === 'string' ? searchParams.type : undefined;
+  const typeParam = searchParams.type;
   
+  const selectedTypes: string[] = Array.isArray(typeParam) 
+    ? typeParam 
+    : (typeof typeParam === 'string' ? [typeParam] : []);
+    
   const page = parseInt(pageParam, 10);
 
   const types = await getTypes();
-  const { results, count } = await getPokemons(page, typeParam);
+  const { results, count } = await getPokemons(page, selectedTypes);
 
   const totalPages = Math.ceil(count / LIMIT);
 
   const prevQuery = new URLSearchParams();
-  if (typeParam) prevQuery.set('type', typeParam);
+  selectedTypes.forEach(t => prevQuery.append('type', t));
   prevQuery.set('page', (page - 1).toString());
   const prevUrl = page > 1 ? `/?${prevQuery.toString()}` : null;
 
   const nextQuery = new URLSearchParams();
-  if (typeParam) nextQuery.set('type', typeParam);
+  selectedTypes.forEach(t => nextQuery.append('type', t));
   nextQuery.set('page', (page + 1).toString());
   const nextUrl = page < totalPages ? `/?${nextQuery.toString()}` : null;
 
@@ -82,12 +98,32 @@ export default async function Home(props: { searchParams: SearchParams }) {
       
       <section className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <span>Types:</span>
-        <Link className="border p-4" href="/">All</Link>
-        {types.map((t: { name: string; url: string }) => (
-          <Link key={t.name} className="border p-4" href={`/?type=${t.name}`}>
-            {t.name}
-          </Link>
-        ))}
+        <Link 
+          className={`border p-4 ${selectedTypes.length === 0 ? "bg-blue-500 text-white" : ""}`} 
+          href="/"
+        >
+          All
+        </Link>
+        {types.map((t: { name: string; url: string }) => {
+          const isSelected = selectedTypes.includes(t.name);
+          const newSelected = isSelected 
+            ? selectedTypes.filter(st => st !== t.name)
+            : [...selectedTypes, t.name];
+          
+          const query = new URLSearchParams();
+          newSelected.forEach(st => query.append('type', st));
+          // Note: when changing types, always reset to page 1 implicitly by omitted ?page=
+          
+          return (
+            <Link 
+              key={t.name} 
+              className={`border p-4 ${isSelected ? "bg-blue-500 text-white" : ""}`} 
+              href={newSelected.length > 0 ? `/?${query.toString()}` : "/"}
+            >
+              {t.name}
+            </Link>
+          );
+        })}
       </section>
 
       <section className="grid grid-cols-6 gap-x-16 gap-y-6">
