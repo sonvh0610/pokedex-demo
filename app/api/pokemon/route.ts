@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Type not found' }, { status: 404 });
       }
       const data = await res.json();
-      const allPokemonsOfType = data.pokemon.map((p: any) => p.pokemon);
+      const allPokemonsOfType = data.pokemon.map((p: { pokemon: { name: string; url: string } }) => p.pokemon);
       
       count = allPokemonsOfType.length;
       const paginatedSlice = allPokemonsOfType.slice(offset, offset + LIMIT);
