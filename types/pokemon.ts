@@ -62,3 +62,24 @@ export interface GetPokemonsResult {
   results: PokeApiModel[];
   count: number;
 }
+
+/**
+ * Response shape returned by our internal /api/pokemon route.
+ * Includes server-computed pagination navigation URLs.
+ */
+export interface PokemonPageResponse {
+  results: PokeApiModel[];
+  count: number;
+  currentPage: number;
+  totalPages: number;
+  prevUrl: string | null;
+  nextUrl: string | null;
+}
+
+/**
+ * Response shape returned by our internal /api/pokemon-types route.
+ */
+export interface TypesApiResponse {
+  results: NamedAPIResource[];
+}
+
