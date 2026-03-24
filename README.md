@@ -20,6 +20,22 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Docker Setup
+
+You can easily run this project using Docker to ensure a standardized runtime environment when sharing with your teammates.
+
+1. **Build the Docker Image:**
+   ```bash
+   docker build -t pokedex-demo .
+   ```
+
+2. **Run the Container:**
+   ```bash
+   docker run -p 3000:3000 pokedex-demo
+   ```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application running.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
